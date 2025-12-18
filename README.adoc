@@ -1,60 +1,148 @@
-= robot-repo-bot
-Jonathan D.A. Jewell <jonathan.jewell@gmail.com>
-:toc: macro
+= Robot Repo Bot
+:doctype: book
 :icons: font
 :source-highlighter: rouge
-:experimental:
-:url-github: https://github.com/hyperpolymath/robot-repo-bot
-:url-gitlab: https://gitlab.com/hyperpolymath/robot-repo-bot
-:url-bitbucket: https://bitbucket.org/hyperpolymath/robot-repo-bot
-:url-codeberg: https://codeberg.org/hyperpolymath/robot-repo-bot
+:toc: left
+:toclevels: 2
+:sectnums:
+:sectnumlevels: 2
+:author: Hyperpolymath
+:revnumber: 2.0.0-rsr
+:revdate: 2025-10-13
 
-Automated repository management bot
+[abstract]
+.Rhodium Standard Compliance
+The **Robot Repo Bot** is an autonomous infrastructure agent designed to enforce **Rhodium Standard (RSR)** compliance across distributed repositories. Unlike passive linters, the Robot actively "heals" the filesystem using SaltStack, ensuring directory integrity, permission strictness, and hygiene without human intervention.
 
-image:https://img.shields.io/badge/RSR-Certified-gold[RSR Certified,link=https://github.com/hyperpolymath/rhodium-standard-repositories]
-image:https://img.shields.io/badge/License-AGPL%20v3-blue[License]
+---
 
-toc::[]
+== 1. Overview
 
-== Overview
-Domain: *software-development*
+The Robot acts as the **local state enforcer** for your project. It is written in Python and leverages `salt-call --local` to apply idempotent state transformations.
 
-== Installation
+=== Core Capabilities
+* **Directory Skeletal Enforcement:** Ensures required paths (`config/`, `dist/`, `internal/`) exist.
+* **Permission Guarding:** Enforces `0755` on scripts and `0600` on secrets.
+* **Entropy Pruning:** Automatically strips trailing whitespace and enforces EOF newlines.
+* **Git Hook Integration:** Acts as a `pre-commit` gatekeeper.
+
+== 2. Installation
+
+The Robot is designed to be installed as a **Git Submodule** or a **PIPX** tool.
+
+=== Option A: Submodule (Recommended)
+Add the Robot to your project's `maintenance/` directory:
 
 [source,bash]
 ----
-# Clone from GitHub (primary)
-git clone {url-github}
-
-# Or from mirrors
-git clone {url-gitlab}
-git clone {url-codeberg}
+git submodule add https://gitlab.com/hyperpolymath/robot-repo-bot.git maintenance/robot
 ----
 
-== Mirrors
+=== Option B: Standalone
+[source,bash]
+----
+pip install --user git+https://gitlab.com/hyperpolymath/robot-repo-bot.git
+----
 
-[cols="1,2"]
-|===
-| Platform | URL
+== 3. Transacting with the Robot
 
-| GitHub (primary) | {url-github}
-| GitLab | {url-gitlab}
-| Bitbucket | {url-bitbucket}
-| Codeberg | {url-codeberg}
-|===
+The Robot exposes a CLI interface for three distinct modes of operation.
 
-== License
+=== Mode 1: The Healer (Fix)
+Directly applies the Rhodium state to the current repository. This will modify files.
 
-Licensed under AGPL-3.0-or-later OR LicenseRef-Palimpsest-0.5.
+[source,bash]
+----
+# Run via Justfile (Preferred)
+just robot
 
-See link:LICENSE[LICENSE] for details.
+# Direct Invocation
+python3 maintenance/robot/main.py fix
+----
 
-== Contributing
+=== Mode 2: The Auditor (Check)
+Performs a dry-run. Returns `exit 0` if compliant, `exit 1` if violations are found. Used in CI/CD.
 
-See link:CONTRIBUTING.adoc[CONTRIBUTING.adoc].
+[source,bash]
+----
+python3 maintenance/robot/main.py check
+----
 
-== Metadata
+=== Mode 3: The Watchman (Daemon)
+Monitors the filesystem for changes and reverts unauthorized modifications instantly.
 
-* Domain: software-development
-* Framework: RSR (Rhodium Standard Repository)
-* Dublin Core: link:.well-known/dc.xml[.well-known/dc.xml]
+[source,bash]
+----
+python3 maintenance/robot/main.py watch
+----
+
+== 4. Configuration
+
+The Robot looks for a `robot.toml` in the repository root. If missing, it applies the **Strict Default RSR Policy**.
+
+.Example `robot.toml`
+[source,toml]
+----
+[core]
+strict_mode = true
+
+[filesystem]
+# Directories that MUST exist
+required_dirs = [
+  "config",
+  "internal/cadre",
+  "dist"
+]
+
+# Files that must strictly be executable
+executables = [
+  "just",
+  "scripts/**/*.sh"
+]
+
+[salt]
+# Custom salt state modules
+state_root = "./maintenance/states"
+----
+
+== 5. Architecture
+
+The Robot uses a hexagonal architecture to separate the *Policy* (RSR Rules) from the *Actuator* (SaltStack).
+
+[plantuml, architecture, png]
+....
+@startuml
+skinparam monochrome true
+
+actor "User / CI" as User
+component "Robot CLI" as CLI
+component "Policy Engine" as Policy
+component "SaltStack Local" as Salt
+database "Filesystem" as FS
+
+User -> CLI : Transact (Fix/Check)
+CLI -> Policy : Load Rules (robot.toml)
+Policy -> Salt : Compile State
+Salt -> FS : Enforce State (Idempotent)
+FS -> Salt : Return Diff
+Salt -> CLI : Report Status
+@enduml
+....
+
+== 6. Legal & Philosophical Manifesto
+
+This software is an instrument of the **Manifesto for a Better Web**. It is strictly governed to ensure user sovereignty, provenance, and freedom.
+
+=== The License Triad
+Users may choose to transact with this software under **one** of the following strictly defined terms:
+
+1.  **The Freedom Path (MIT):** For maximum permissiveness and integration.
+2.  **The Copyleft Path (AGPLv3):** For those contributing back to the commons.
+
+**IN ADDITION**, the **Palimpsest License (v0.8)** is strictly enforced regarding the use of this codebase in AI Training sets.
+> _"Data provenance is dignity. You may not ingest this code into a stochastic model without retaining the specific attribution and reversible history of its authors."_
+
+By using this tool, you acknowledge that Audit-Grade infrastructure is a human right, not a luxury.
+
+* **Maintainer:** Jonathan D.A. Jewell (hyperpolymath)
+* **Standard:** Rhodium (RSR)
