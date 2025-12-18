@@ -13,3 +13,13 @@ build-coordinator:
 # Run the TUI
 ui: build-coordinator
     ./bin/robot_coordinator
+
+# Build the Ada Coordinator
+build-coord:
+    @echo ">>> [Ada] Compiling High-Assurance TUI..."
+    mkdir -p obj/coordinator bin
+    gprbuild -P src/coordinator/robot.gpr
+
+# Run the TUI
+ui: build-coord
+    ./bin/main
